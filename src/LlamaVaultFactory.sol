@@ -10,10 +10,7 @@ contract LlamaVaultFactory {
 
     event LlamaVaultCreated(address token, address owner, address vault);
 
-    function createVault(ERC20 _token)
-        external
-        returns (ERC4626 vault)
-    {
+    function createVault(ERC20 _token) external returns (ERC4626 vault) {
         require(address(_token) != address(0), "invalid token");
         vault = new LlamaVault{
             salt: keccak256(abi.encodePacked(_token, msg.sender))

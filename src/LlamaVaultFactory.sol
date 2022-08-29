@@ -1,24 +1,27 @@
 // SPDX-License-Identifier: AGPL-3.0
-pragma solidity ^0.8.13;
+pragma solidity ^0.8.16;
 
 import {ERC20} from "solmate/tokens/ERC20.sol";
-import {ERC4626} from "solmate/mixins/ERC4626.sol";
 import {LlamaVault} from "./LlamaVault.sol";
+
+error InvalidToken();
 
 contract LlamaVaultFactory {
     bytes32 constant INIT_CODEHASH = keccak256(type(LlamaVault).creationCode);
 
-    event LlamaVaultCreated(address token, address owner, address vault);
+    event LlamaVaultCreated(address token, address vault);
 
-    function createVault(ERC20 _token) external returns (ERC4626 vault) {
-        require(address(_token) != address(0), "invalid token");
-        vault = new LlamaVault{
-            salt: keccak256(abi.encodePacked(_token, msg.sender))
-        }(_token, msg.sender);
-        emit LlamaVaultCreated(address(_token), msg.sender, address(vault));
+    function createLlamaVault(address _token) external returns (address vault) {
+        if (_token == address(0)) revert InvalidToken();
+        vault = address(
+            new LlamaVault{salt: bytes32(uint256(uint160(_token)))}(
+                ERC20(_token)
+            )
+        );
+        emit LlamaVaultCreated(_token, vault);
     }
 
-    function calcVaultAddress(ERC20 _token, address _owner)
+    function calculateLlamaVaultAddress(address _token)
         external
         view
         returns (address vault, bool deployed)
@@ -30,13 +33,14 @@ contract LlamaVaultFactory {
                         abi.encodePacked(
                             bytes1(0xff),
                             address(this),
-                            keccak256(abi.encodePacked(_token, _owner)),
+                            bytes32(uint256(uint160(_token))),
                             INIT_CODEHASH
                         )
                     )
                 )
             )
         );
+
         deployed = vault.code.length != 0;
     }
 }
